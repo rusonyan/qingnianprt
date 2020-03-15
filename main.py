@@ -32,7 +32,7 @@ def image2bytes(image):
 
 
 app = Flask(__name__)
-@app.route('/', methods=['GET'])
+@app.route('/abcdefghgklmn', methods=['GET'])
 def index():
 
     res = requests.get('http://news.cyol.com/node_67071.htm')
