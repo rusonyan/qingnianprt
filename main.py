@@ -4,7 +4,13 @@ import os
 import io
 from PIL import Image, ImageFont, ImageDraw
 from flask import Flask, request, render_template, send_file
-
+from email.mime.text import MIMEText
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+from email.header import Header
+from email.utils import parseaddr, formataddr
 
 
 def get_image(path):
@@ -60,7 +66,37 @@ def index():
     im.paste(cover, (149, 1056))
     sp = './static/end.png'
     im.save(sp, 'png')
+
+    msg = MIMEMultipart()
+    with open('./static/end.png', 'rb') as f:
+        mime = MIMEBase('image', 'png', filename='print.png')
+        # 加上必要的头信息:
+        mime.add_header('Content-Disposition',
+                        'attachment', filename='print.png')
+        mime.add_header('Content-ID', '<0>')
+        mime.add_header('X-Attachment-Id', '0')
+        # 把附件的内容读进来:
+        mime.set_payload(f.read())
+        # 用Base64编码:
+        encoders.encode_base64(mime)
+        # 添加到MIMEMultipart:
+        msg.attach(mime)
+
+    msg['Subject'] = Header('来了……', 'utf-8').encode()
+    msg.attach(MIMEText('send with file...', 'plain', 'utf-8'))
+
+    from_addr = 'rusyan@sina.com'
+    msg['From'] = Header(from_addr)
+    password = '4703aaacb98c70b4'
+    to_addr = 'rusonyan@qq.com'
+    smtp_server = 'smtp.sina.com'
+    server = smtplib.SMTP(smtp_server, 25)
+    server.login(from_addr, password)
+    server.sendmail(from_addr, [to_addr], msg.as_string())
+    server.quit()
+
     return render_template('respon.html')
-    
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
