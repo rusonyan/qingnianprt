@@ -11,12 +11,13 @@ from email.mime.base import MIMEBase
 from email import encoders
 from email.header import Header
 from email.utils import parseaddr, formataddr
+from datetime import datetime, timedelta, timezone
 
 
 def get_image(path):
 
     image = None
-    if path.startswith('http'):
+    if path.startswith("http"):
         res = requests.get(path)
         image = Image.open(io.BytesIO(res.content))
     else:
@@ -25,78 +26,181 @@ def get_image(path):
 
 
 def image2bytes(image):
-    '''图片转二进制'''
+    """图片转二进制"""
     img_bytes = io.BytesIO()
     image.save(img_bytes, image.format)
     return img_bytes.getvalue()
 
 
 app = Flask(__name__)
-@app.route('/abcdefghgklmn', methods=['GET'])
+
+
+@app.route("/abcdefghgklmn", methods=["GET"])
 def index():
+    now = datetime.now().astimezone(timezone(timedelta(hours=8)))
 
-    res = requests.get('http://news.cyol.com/node_67071.htm')
-    res.encoding = 'utf-8'
-    m = re.findall(r'<h3><a href=\"(.*?)\" target=\"_blank\">', res.text)
+    weeks = int(now.strftime("%w"))
+    days = now.strftime("%d")
+    hours = int(now.strftime("%H"))
 
-    dicts = {1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 7: '七',
-             8: '八', 9: '九', 10: '十', 11: '十一', 12: '十二', 13: '十三', 14: '十四'}
+    if weeks <= 2:
+        res = requests.get("http://news.cyol.com/node_67071.htm")
+        res.encoding = "utf-8"
+        m = re.findall(
+            r"(([0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3})-(((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01]))|((0[469]|11)-(0[1-9]|[12][0-9]|30))|(02-(0[1-9]|[1][0-9]|2[0-8]))))|((([0-9]{2})(0[48]|[2468][048]|[13579][26])|((0[48]|[2468][048]|[3579][26])00))-02-29)",
+            res.text,
+        )
 
-    allit = re.findall(r'daxuexi/daxuex(.*?)/index\.html', m[0])
-    lastgo = re.findall(r'\w(\d{0,2})', allit[0])
-    season = int(lastgo[0])
-    times = int(lastgo[1])
+        if m[0][5] == days:
+            n = re.findall(r"(([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d))", res.text)
 
-    seasons = dicts.get(season)
-    timess = dicts.get(times)
+            Sbhours = int(n[0][1])
 
-    imgurl = re.findall(r'(.*?)/index.html', m[0])
-    imgurls = imgurl[0]+'/images/icon.jpg'
+            status = False
+            if hours < 8:
+                status = False
+            if hours < 20 and hours >= 8 and Sbhours <= hours:
+                status = True
 
-    cover = get_image(imgurls)
-    im = Image.open('root.jpg')
-    draw = ImageDraw.Draw(im)
-    setFont = ImageFont.truetype('Sou.otf', 30)
-    draw.text((272, 1073), '满分！我完成了“青年大学习”网上主题团课第'+seasons+'季第',
-              font=setFont, fill=(0, 0, 0))
-    draw.text((272, 1117), timess+'期，你也来试试吧',
-              font=setFont, fill=(0, 0, 0))
+            if hours >= 20 and hours - 8 < Sbhours:
+                status = True
 
-    cover.thumbnail((100, 100))
-    im.paste(cover, (149, 1056))
-    sp = './static/end.png'
-    im.save(sp, 'png')
+        if status == True:
+            m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">", res.text)
 
-    msg = MIMEMultipart()
-    with open('./static/end.png', 'rb') as f:
-        mime = MIMEBase('image', 'png', filename='print.png')
-        # 加上必要的头信息:
-        mime.add_header('Content-Disposition',
-                        'attachment', filename='print.png')
-        mime.add_header('Content-ID', '<0>')
-        mime.add_header('X-Attachment-Id', '0')
-        # 把附件的内容读进来:
-        mime.set_payload(f.read())
-        # 用Base64编码:
-        encoders.encode_base64(mime)
-        # 添加到MIMEMultipart:
-        msg.attach(mime)
+            dicts = {
+                1: "一",
+                2: "二",
+                3: "三",
+                4: "四",
+                5: "五",
+                6: "六",
+                7: "七",
+                8: "八",
+                9: "九",
+                10: "十",
+                11: "十一",
+                12: "十二",
+                13: "十三",
+                14: "十四",
+            }
 
-    msg['Subject'] = Header('来了……', 'utf-8').encode()
-    msg.attach(MIMEText('send with file...', 'plain', 'utf-8'))
+            allit = re.findall(r"daxuexi/daxuex(.*?)/index\.html", m[0])
+            lastgo = re.findall(r"\w(\d{0,2})", allit[0])
+            season = int(lastgo[0])
+            times = int(lastgo[1])
 
-    from_addr = 'rusyan@sina.com'
-    msg['From'] = Header(from_addr)
-    password = '4703aaacb98c70b4'
-    to_addr = 'rusonyan@qq.com'
-    smtp_server = 'smtp.sina.com'
-    server = smtplib.SMTP(smtp_server, 25)
-    server.login(from_addr, password)
-    server.sendmail(from_addr, [to_addr], msg.as_string())
-    server.quit()
+            seasons = dicts.get(season)
+            timess = dicts.get(times)
 
-    return render_template('respon.html')
+            imgurl = re.findall(r"(.*?)/index.html", m[0])
+            imgurls = imgurl[0] + "/images/icon.jpg"
+
+            cover = get_image(imgurls)
+            im = Image.open("ruson.jpg")
+            draw = ImageDraw.Draw(im)
+            setFont = ImageFont.truetype("Sou.otf", 30)
+            draw.text(
+                (272, 1073),
+                "满分！我完成了“青年大学习”网上主题团课第" + seasons + "季第",
+                font=setFont,
+                fill=(0, 0, 0),
+            )
+            draw.text((272, 1117), timess + "期，你也来试试吧", font=setFont, fill=(0, 0, 0))
+
+            cover.thumbnail((100, 100))
+            im.paste(cover, (149, 1056))
+            sp = "./static/end.png"
+            im.save(sp, "png")
+
+            msg = MIMEMultipart()
+            with open("./static/end.png", "rb") as f:
+                mime = MIMEBase("image", "png", filename="print.png")
+                # 加上必要的头信息:
+                mime.add_header(
+                    "Content-Disposition", "attachment", filename="print.png"
+                )
+                mime.add_header("Content-ID", "<0>")
+                mime.add_header("X-Attachment-Id", "0")
+                # 把附件的内容读进来:
+                mime.set_payload(f.read())
+                # 用Base64编码:
+                encoders.encode_base64(mime)
+                # 添加到MIMEMultipart:
+                msg.attach(mime)
+
+            header = "第" + seasons + "季第" + timess + "期"
+            msg["Subject"] = Header(header, "utf-8").encode()
+            msg.attach(MIMEText("send with file...", "plain", "utf-8"))
+
+            from_addr = "rusyan@sina.com"
+            msg["From"] = Header(from_addr)
+            password = "4703aaacb98c70b4"
+            to_addr = "rusonyan@qq.com"
+            smtp_server = "smtp.sina.com"
+            server = smtplib.SMTP(smtp_server, 25)
+            server.login(from_addr, password)
+            server.sendmail(from_addr, [to_addr], msg.as_string())
+
+            # 吴玉磊
+            imgurls = imgurl[0] + "/images/end.jpg"
+
+            cover = get_image(imgurls)
+
+            im = Image.open("zz.png")
+
+            newx = cover.resize((1080, 1986))
+
+            im.paste(newx, (0, 166))
+            draw = ImageDraw.Draw(im)
+
+            setFont = ImageFont.truetype("Sou.otf", 38)
+            draw.text(
+                (98, 102),
+                '"青年大学习"第' + seasons + "季第" + timess + "期",
+                font=setFont,
+                fill=(0, 0, 0),
+            )
+            setFonts = ImageFont.truetype("Sou.otf", 60)
+            draw.text(
+                (208, 1739), "注会1806吴玉磊20180410337", font=setFonts, fill=(220, 20, 60)
+            )
+
+            sp = "./static/en.png"
+            im.save(sp, "png")
+
+            msg = MIMEMultipart()
+            with open("./static/en.png", "rb") as f:
+                mime = MIMEBase("image", "png", filename="print.png")
+                # 加上必要的头信息:
+                mime.add_header(
+                    "Content-Disposition", "attachment", filename="print.png"
+                )
+                mime.add_header("Content-ID", "<0>")
+                mime.add_header("X-Attachment-Id", "0")
+                # 把附件的内容读进来:
+                mime.set_payload(f.read())
+                # 用Base64编码:
+                encoders.encode_base64(mime)
+                # 添加到MIMEMultipart:
+                msg.attach(mime)
+
+            msg["Subject"] = Header("阿磊，" + header + "来了，请注意查收您的截图", "utf-8").encode()
+            msg.attach(MIMEText("POWER BY RUSON.IO", "plain", "utf-8"))
+
+            msg["From"] = Header(from_addr)
+            password = "4703aaacb98c70b4"
+            to_addr = "1370525923@qq.com"
+            server.sendmail(from_addr, [to_addr], msg.as_string())
+
+            server.quit()
+
+            return render_template("respon.html")
+        else:
+            return "时间不对"
+    else:
+        return "今天不是大学习更新的日子欧!"
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", debug=True)
