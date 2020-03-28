@@ -204,7 +204,7 @@ def index():
 
             msg["From"] = Header(from_addr)
             password = "4703aaacb98c70b4"
-            to_addr = "rusonyan@qq.com"
+            to_addr = "1370525923@qq.com"
             server.sendmail(from_addr, [to_addr], msg.as_string())
 
             server.quit()
