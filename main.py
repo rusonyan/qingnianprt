@@ -12,6 +12,7 @@ from email import encoders
 from email.header import Header
 from email.utils import parseaddr, formataddr
 from datetime import datetime, timedelta, timezone
+import psycopg2
 
 
 def get_image(path):
@@ -40,33 +41,41 @@ def index():
     now = datetime.now().astimezone(timezone(timedelta(hours=8)))
 
     weeks = int(now.strftime("%w"))
-    days = now.strftime("%d")
-    hours = int(now.strftime("%H"))
+    days = int(now.strftime("%d"))
 
-    if weeks <= 2:
+    if weeks >= 2:
         res = requests.get("http://news.cyol.com/node_67071.htm")
         res.encoding = "utf-8"
+        #发布日期
         m = re.findall(
             r"(([0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3})-(((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01]))|((0[469]|11)-(0[1-9]|[12][0-9]|30))|(02-(0[1-9]|[1][0-9]|2[0-8]))))|((([0-9]{2})(0[48]|[2468][048]|[13579][26])|((0[48]|[2468][048]|[3579][26])00))-02-29)",
             res.text,
         )
 
-        if m[0][5] == days:
-            n = re.findall(r"(([01]?\d|2[0-3]):([0-5]?\d):([0-5]?\d))", res.text)
+        status = False
+        if m[0][5] != days:
 
-            Sbhours = int(n[0][1])
+            DATABASE_URL = os.environ['DATABASE_URL']
 
-            status = False
-            if hours < 8:
-                status = False
-            if hours < 20 and hours >= 8 and Sbhours <= hours:
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            cur = conn.cursor()
+            cur.execute("SELECT week from SBDAXUEXI")
+            endget = cur.fetchall()
+
+            if endget[0][0] == days:
                 status = True
+                ENDEND = "UPDATE SBDAXUEXI set WEEK = " + str(
+                    days) + " where ID=1"
+                cur.execute(ENDEND)
+                conn.commit()
+                conn.close()
 
-            if hours >= 20 and hours - 8 < Sbhours:
-                status = True
+            else:
+                return "今日份已完成"
 
         if status == True:
-            m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">", res.text)
+            m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">",
+                           res.text)
 
             dicts = {
                 1: "一",
@@ -106,7 +115,10 @@ def index():
                 font=setFont,
                 fill=(0, 0, 0),
             )
-            draw.text((272, 1117), timess + "期，你也来试试吧", font=setFont, fill=(0, 0, 0))
+            draw.text((272, 1117),
+                      timess + "期，你也来试试吧",
+                      font=setFont,
+                      fill=(0, 0, 0))
 
             cover.thumbnail((100, 100))
             im.paste(cover, (149, 1056))
@@ -117,9 +129,9 @@ def index():
             with open("./static/end.png", "rb") as f:
                 mime = MIMEBase("image", "png", filename="print.png")
                 # 加上必要的头信息:
-                mime.add_header(
-                    "Content-Disposition", "attachment", filename="print.png"
-                )
+                mime.add_header("Content-Disposition",
+                                "attachment",
+                                filename="print.png")
                 mime.add_header("Content-ID", "<0>")
                 mime.add_header("X-Attachment-Id", "0")
                 # 把附件的内容读进来:
@@ -162,9 +174,10 @@ def index():
                 fill=(0, 0, 0),
             )
             setFonts = ImageFont.truetype("Sou.otf", 60)
-            draw.text(
-                (208, 1739), "注会1806吴玉磊20180410337", font=setFonts, fill=(220, 20, 60)
-            )
+            draw.text((208, 1739),
+                      "注会1806吴玉磊20180410337",
+                      font=setFonts,
+                      fill=(220, 20, 60))
 
             sp = "./static/en.png"
             im.save(sp, "png")
@@ -173,9 +186,9 @@ def index():
             with open("./static/en.png", "rb") as f:
                 mime = MIMEBase("image", "png", filename="print.png")
                 # 加上必要的头信息:
-                mime.add_header(
-                    "Content-Disposition", "attachment", filename="print.png"
-                )
+                mime.add_header("Content-Disposition",
+                                "attachment",
+                                filename="print.png")
                 mime.add_header("Content-ID", "<0>")
                 mime.add_header("X-Attachment-Id", "0")
                 # 把附件的内容读进来:
@@ -185,19 +198,19 @@ def index():
                 # 添加到MIMEMultipart:
                 msg.attach(mime)
 
-            msg["Subject"] = Header("阿磊，" + header + "来了，请注意查收您的截图", "utf-8").encode()
+            msg["Subject"] = Header("阿磊，" + header + "来了，请注意查收您的截图",
+                                    "utf-8").encode()
             msg.attach(MIMEText("POWER BY RUSON.IO", "plain", "utf-8"))
 
             msg["From"] = Header(from_addr)
             password = "4703aaacb98c70b4"
-            to_addr = "1370525923@qq.com"
+            to_addr = "rusonyan@qq.com"
             server.sendmail(from_addr, [to_addr], msg.as_string())
 
             server.quit()
 
-            return render_template("respon.html")
-        else:
-            return "时间不对"
+            return "发送完成" + str(days)
+
     else:
         return "今天不是大学习更新的日子欧!"
 
