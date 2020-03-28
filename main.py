@@ -43,7 +43,7 @@ def index():
     weeks = int(now.strftime("%w"))
     days = int(now.strftime("%d"))
 
-    if weeks >= 2:
+    if weeks <= 2:
         res = requests.get("http://news.cyol.com/node_67071.htm")
         res.encoding = "utf-8"
         #发布日期
@@ -53,7 +53,7 @@ def index():
         )
 
         status = False
-        if m[0][5] != days:
+        if m[0][5] == days:
 
             DATABASE_URL = os.environ['DATABASE_URL']
 
@@ -62,7 +62,7 @@ def index():
             cur.execute("SELECT week from SBDAXUEXI")
             endget = cur.fetchall()
 
-            if endget[0][0] == days:
+            if endget[0][0] != days:
                 status = True
                 ENDEND = "UPDATE SBDAXUEXI set WEEK = " + str(
                     days) + " where ID=1"
