@@ -70,8 +70,7 @@ def index():
                 conn.commit()
                 conn.close()
 
-            else:
-                return "今日份已完成"
+            
 
         if status == True:
             m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">",
@@ -210,6 +209,8 @@ def index():
             server.quit()
 
             return "发送完成" + str(days)
+        else:
+                return "今日份已完成"
 
     else:
         return "今天不是大学习更新的日子欧!"
