@@ -43,7 +43,7 @@ def index():
     weeks = int(now.strftime("%w"))
     days = int(now.strftime("%d"))
 
-    if weeks = 1 or weeks= 2:
+    if weeks == 1 or weeks== 2:
         res = requests.get("http://news.cyol.com/node_67071.htm")
         res.encoding = "utf-8"
         #发布日期
