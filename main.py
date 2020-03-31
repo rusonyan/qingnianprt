@@ -153,59 +153,7 @@ def index():
             server.login(from_addr, password)
             server.sendmail(from_addr, [to_addr], msg.as_string())
 
-            # 吴玉磊
-            imgurls = imgurl[0] + "/images/end.jpg"
-
-            cover = get_image(imgurls)
-
-            im = Image.open("zz.png")
-
-            newx = cover.resize((1080, 1986))
-
-            im.paste(newx, (0, 166))
-            draw = ImageDraw.Draw(im)
-
-            setFont = ImageFont.truetype("Sou.otf", 38)
-            draw.text(
-                (98, 102),
-                '"青年大学习"第' + seasons + "季第" + timess + "期",
-                font=setFont,
-                fill=(0, 0, 0),
-            )
-            setFonts = ImageFont.truetype("Sou.otf", 60)
-            draw.text((208, 1739),
-                      "注会1806吴玉磊20180410337",
-                      font=setFonts,
-                      fill=(220, 20, 60))
-
-            sp = "./static/en.png"
-            im.save(sp, "png")
-
-            msg = MIMEMultipart()
-            with open("./static/en.png", "rb") as f:
-                mime = MIMEBase("image", "png", filename="print.png")
-                # 加上必要的头信息:
-                mime.add_header("Content-Disposition",
-                                "attachment",
-                                filename="print.png")
-                mime.add_header("Content-ID", "<0>")
-                mime.add_header("X-Attachment-Id", "0")
-                # 把附件的内容读进来:
-                mime.set_payload(f.read())
-                # 用Base64编码:
-                encoders.encode_base64(mime)
-                # 添加到MIMEMultipart:
-                msg.attach(mime)
-
-            msg["Subject"] = Header("阿磊，" + header + "来了，请注意查收您的截图",
-                                    "utf-8").encode()
-            msg.attach(MIMEText("POWER BY RUSON.IO", "plain", "utf-8"))
-
-            msg["From"] = Header(from_addr)
-            password = "4703aaacb98c70b4"
-            to_addr = "1370525923@qq.com"
-            server.sendmail(from_addr, [to_addr], msg.as_string())
-
+ 
             server.quit()
 
             return "发送完成" + str(days)
