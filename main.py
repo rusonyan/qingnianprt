@@ -53,7 +53,7 @@ def index():
         )
 
         status = False
-        if int(m[0][5]) == days:
+        if int(m[0][8]) == days:
 
             DATABASE_URL = os.environ['DATABASE_URL']
 
