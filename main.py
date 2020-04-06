@@ -72,7 +72,7 @@ def index():
 
             
 
-        if status == True:
+        if status == False:
             m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">",
                            res.text)
 
