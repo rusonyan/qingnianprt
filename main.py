@@ -38,12 +38,15 @@ app = Flask(__name__)
 
 @app.route("/abcdefghgklmn", methods=["GET"])
 def index():
+    print("okk")
     now = datetime.now().astimezone(timezone(timedelta(hours=8)))
 
     weeks = int(now.strftime("%w"))
     days = int(now.strftime("%d"))
+    print(weeks)
 
-    if weeks == 1 or weeks== 2:
+    if weeks == 1 or weeks == 2:
+        print("ok")
         res = requests.get("http://news.cyol.com/node_67071.htm")
         res.encoding = "utf-8"
         #发布日期
@@ -51,7 +54,7 @@ def index():
             r"(([0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3})-(((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01]))|((0[469]|11)-(0[1-9]|[12][0-9]|30))|(02-(0[1-9]|[1][0-9]|2[0-8]))))|((([0-9]{2})(0[48]|[2468][048]|[13579][26])|((0[48]|[2468][048]|[3579][26])00))-02-29)",
             res.text,
         )
-
+        print(m[0][8])
         status = False
         if int(m[0][8]) == days:
 
@@ -70,36 +73,14 @@ def index():
                 conn.commit()
                 conn.close()
 
-            
+        if status == True:
 
-        if status == False:
             m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">",
                            res.text)
-
-            dicts = {
-                1: "一",
-                2: "二",
-                3: "三",
-                4: "四",
-                5: "五",
-                6: "六",
-                7: "七",
-                8: "八",
-                9: "九",
-                10: "十",
-                11: "十一",
-                12: "十二",
-                13: "十三",
-                14: "十四",
-            }
-
-            allit = re.findall(r"daxuexi/daxuex(.*?)/index\.html", m[0])
-            lastgo = re.findall(r"\w(\d{0,2})", allit[0])
-            season = int(lastgo[0])
-            times = int(lastgo[1])
-
-            seasons = dicts.get(season)
-            timess = dicts.get(times)
+            Getname = requests.get(m[0])
+            Getname.encoding = 'utf-8'
+            Getname_n = re.findall(r'<title>“青年大学习”(.*?)</title>',
+                                   Getname.text)
 
             imgurl = re.findall(r"(.*?)/index.html", m[0])
             imgurls = imgurl[0] + "/images/icon.jpg"
@@ -110,12 +91,12 @@ def index():
             setFont = ImageFont.truetype("Sou.otf", 30)
             draw.text(
                 (272, 1073),
-                "满分！我完成了“青年大学习”网上主题团课第" + seasons + "季第",
+                "满分！我完成了“青年大学习”网上主题团课" + Getname_n[0][:3] + "第",
                 font=setFont,
                 fill=(0, 0, 0),
             )
             draw.text((272, 1117),
-                      timess + "期，你也来试试吧",
+                      Getname_n[0][-2:] + "，你也来试试吧",
                       font=setFont,
                       fill=(0, 0, 0))
 
@@ -140,7 +121,7 @@ def index():
                 # 添加到MIMEMultipart:
                 msg.attach(mime)
 
-            header = "第" + seasons + "季第" + timess + "期"
+            header = Getname_n[0]
             msg["Subject"] = Header(header, "utf-8").encode()
             msg.attach(MIMEText("send with file...", "plain", "utf-8"))
 
@@ -153,12 +134,11 @@ def index():
             server.login(from_addr, password)
             server.sendmail(from_addr, [to_addr], msg.as_string())
 
- 
             server.quit()
 
             return "发送完成" + str(days)
         else:
-                return "今日份已完成"
+            return "今日份已完成"
 
     else:
         return "今天不是大学习更新的日子欧!"
