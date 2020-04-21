@@ -143,7 +143,7 @@ def index_x():
     header = mon + '月' + days + '号的日报来了！'
     
     a = requests.get('https://qingnianprt.herokuapp.com/abcdefghgklmn')
-    print(a.text)
+    a.encoding='utf-8'
     msg = MIMEMultipart('alternative')
     msg.attach(MIMEText(a.text, 'html', 'utf-8'))
     msg["Subject"] = Header(header, "utf-8").encode()
