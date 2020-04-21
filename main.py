@@ -142,7 +142,7 @@ def index_x():
     mon = now.strftime("%m")
     header = mon + '月' + days + '号的日报来了！'
     
-    a = requests.get('http://www.xingtai.gov.cn/ywdt/jrxt/qxdt/njx')
+    a = requests.get('https://qingnianprt.herokuapp.com/abcdefghgklmn')
     a.encoding='utf-8'
     msg = MIMEMultipart('alternative')
     msg.attach(MIMEText(a.text, 'html', 'utf-8'))
