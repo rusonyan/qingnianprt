@@ -2,7 +2,7 @@ import requests
 import re
 import os
 import io
-from PIL import Image, ImageFont, ImageDraw
+import json
 from flask import Flask, request, render_template, send_file
 from email.mime.text import MIMEText
 import smtplib
@@ -15,22 +15,35 @@ from datetime import datetime, timedelta, timezone
 import psycopg2
 
 
-def get_image(path):
-
-    image = None
-    if path.startswith("http"):
-        res = requests.get(path)
-        image = Image.open(io.BytesIO(res.content))
-    else:
-        image = Image.open(path)
-    return image
+def gethb(hblist):
+    link = re.findall(r'<a href=\"(.*?)\"', hblist)
+    name = re.findall(r'title=\'(.*?)\'', hblist)
+    return link[0], name[0]
 
 
-def image2bytes(image):
-    """图片转二进制"""
-    img_bytes = io.BytesIO()
-    image.save(img_bytes, image.format)
-    return img_bytes.getvalue()
+def getpre(link):
+    endlink = requests.get(link)
+    endlink.encoding = 'utf-8'
+    endlinkstr = re.findall(r'name=\"description\" content=\"(.*?)>',
+                            endlink.text)
+    return endlinkstr[0][:100]
+
+
+def getprs(njlist):
+    link = re.findall(r'(\d*).html', njlist)
+    name = re.findall(r'_blank\">(.*)', njlist)
+    links = 'http://info.ningjin.gov.cn/content/' + link[0] + '.html'
+    return links, name[0]
+
+
+class Hbset(object):
+    def __init__(self, n, l, p):
+        self.hbname = n
+        self.hblink = l
+        self.hbprev = p
+
+    def print(self):
+        return self.hbname, self.hblink, self.hbprev
 
 
 app = Flask(__name__)
@@ -38,111 +51,115 @@ app = Flask(__name__)
 
 @app.route("/abcdefghgklmn", methods=["GET"])
 def index():
-    print("okk")
+    guojinew = ''
+    hbset = []
+    hbset.append(Hbset(' ', ' ', ' '))
+    #新闻
+    guojinews = []
+    toutiao = requests.get(
+        'https://way.jd.com/jisuapi/get?channel=国际&num=5&start=0&appkey=5e35c7cd0fe22478c66286b7596f2e68'
+    )
+    toutiao.encoding = 'utf-8'
+    jsons = json.loads(toutiao.text)
+    newslist = jsons['result']['result']['list'][0]['title']
+    guojinews.append(jsons['result']['result']['list'][0]['title'])
+    guojinews.append(jsons['result']['result']['list'][1]['title'])
+    guojinews.append(jsons['result']['result']['list'][2]['title'])
+    guojinews.append(jsons['result']['result']['list'][3]['title'])
+    guojinews.append(jsons['result']['result']['list'][4]['title'])
+    for x in range(5):
+        guojinew = guojinew + str(x + 1) + '.  ' + guojinews[x] + '  '
+
+    #建院
+    hbre = requests.get("http://www.hebiace.edu.cn/col/col6/index.html")
+    hbre.encoding = 'utf-8'
+    hbre_get = re.findall(r'<div class=\"fl\"(.*?)div>', hbre.text)
+
+    gotsql = 'http://www.hebiace.edu.cn/art/2020/3/27/art_6_14156.html'
+    gotsql0 = 'http://info.ningjin.gov.cn/content/1783.html'
+    gotsql1 = 'http://info.ningjin.gov.cn/content/16456.html'
+
+    for x in range(10):
+        link, name = gethb(hbre_get[x])
+        if link == gotsql:
+            break
+        hbset.append(Hbset(name, link, getpre(link)))
+
+    njtar = [
+        'http://info.ningjin.gov.cn/channelList/11055.html',
+        'http://info.ningjin.gov.cn/channelList/11072.html'
+    ]
+
+    for x in range(2):
+        njre = requests.get(njtar[x])
+        njre.encoding = 'utf-8'
+        njre_get = re.findall(r'<a href=\"/content/(.*?)</a>', njre.text)
+        for y in range(4):
+            link, name = getprs(njre_get[y])
+            if link == gotsql0 or link == gotsql1:
+                break
+            hbset.append(Hbset(name, link, name))
+
+    try:
+        name1, link1, prev1 = hbset[1].print()
+    except IndexError as e:
+        name1, link1, prev1 = hbset[0].print()
+    try:
+        name2, link2, prev2 = hbset[2].print()
+    except IndexError as e:
+        name2, link2, prev2 = hbset[0].print()
+    try:
+        name3, link3, prev3 = hbset[3].print()
+    except IndexError as e:
+        name3, link3, prev3 = hbset[0].print()
+    try:
+        name4, link4, prev4 = hbset[4].print()
+    except IndexError as e:
+        name4, link4, prev4 = hbset[0].print()
+    return render_template(
+        'index.htm',
+        guojinew=guojinew,
+        name1=name1,
+        link1=link1,
+        prev1=prev1,
+        name2=name2,
+        link2=link2,
+        prev2=prev2,
+        name3=name3,
+        link3=link3,
+        prev3=prev3,
+        name4=name4,
+        link4=link4,
+        prev4=prev4,
+    )
+
+
+app = Flask(__name__)
+
+
+@app.route("/mail", methods=["GET"])
+def index():
+    #requests.get('https://qingnianprt.herokuapp.com/abcdefghgklmn')
     now = datetime.now().astimezone(timezone(timedelta(hours=8)))
+    days = now.strftime("%d")
+    mon = now.strftime("%m")
+    header = mon + '月' + days + '号的日报来了！'
+    
+    a = requests.get('https://qingnianprt.herokuapp.com/abcdefghgklmn')
+    print(a.text)
+    msg = MIMEMultipart('alternative')
+    msg.attach(MIMEText(a.text, 'html', 'utf-8'))
+    msg["Subject"] = Header(header, "utf-8").encode()
 
-    weeks = int(now.strftime("%w"))
-    days = int(now.strftime("%d"))
-    print(weeks)
+    from_addr = "rusyan@sina.com"
+    msg["From"] = Header(from_addr)
+    msg['To'] = "闫瑞松"
+    password = "4703aaacb98c70b4"
+    to_addr = "rusonyan@qq.com"
+    smtp_server = "smtp.sina.com"
+    server = smtplib.SMTP(smtp_server, 25)
+    server.login(from_addr, password)
+    server.sendmail(from_addr, [to_addr], msg.as_string())
 
-    if weeks == 1 or weeks == 2:
-        print("ok")
-        res = requests.get("http://news.cyol.com/node_67071.htm")
-        res.encoding = "utf-8"
-        #发布日期
-        m = re.findall(
-            r"(([0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3})-(((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01]))|((0[469]|11)-(0[1-9]|[12][0-9]|30))|(02-(0[1-9]|[1][0-9]|2[0-8]))))|((([0-9]{2})(0[48]|[2468][048]|[13579][26])|((0[48]|[2468][048]|[3579][26])00))-02-29)",
-            res.text,
-        )
-        print(m[0][8])
-        status = False
-        if int(m[0][8]) == days:
-
-            DATABASE_URL = os.environ['DATABASE_URL']
-
-            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-            cur = conn.cursor()
-            cur.execute("SELECT week from SBDAXUEXI")
-            endget = cur.fetchall()
-
-            if endget[0][0] != days:
-                status = True
-                ENDEND = "UPDATE SBDAXUEXI set WEEK = " + str(
-                    days) + " where ID=1"
-                cur.execute(ENDEND)
-                conn.commit()
-                conn.close()
-
-        if status == True:
-
-            m = re.findall(r"<h3><a href=\"(.*?)\" target=\"_blank\">",
-                           res.text)
-            Getname = requests.get(m[0])
-            Getname.encoding = 'utf-8'
-            Getname_n = re.findall(r'<title>“青年大学习”(.*?)</title>',
-                                   Getname.text)
-
-            imgurl = re.findall(r"(.*?)/index.html", m[0])
-            imgurls = imgurl[0] + "/images/icon.jpg"
-
-            cover = get_image(imgurls)
-            im = Image.open("ruson.jpg")
-            draw = ImageDraw.Draw(im)
-            setFont = ImageFont.truetype("Sou.otf", 30)
-            draw.text(
-                (272, 1073),
-                "满分！我完成了“青年大学习”网上主题团课" + Getname_n[0][:3] + "第",
-                font=setFont,
-                fill=(0, 0, 0),
-            )
-            draw.text((272, 1117),
-                      Getname_n[0][-2:] + "，你也来试试吧",
-                      font=setFont,
-                      fill=(0, 0, 0))
-
-            cover.thumbnail((100, 100))
-            im.paste(cover, (149, 1056))
-            sp = "./static/end.png"
-            im.save(sp, "png")
-
-            msg = MIMEMultipart()
-            with open("./static/end.png", "rb") as f:
-                mime = MIMEBase("image", "png", filename="print.png")
-                # 加上必要的头信息:
-                mime.add_header("Content-Disposition",
-                                "attachment",
-                                filename="print.png")
-                mime.add_header("Content-ID", "<0>")
-                mime.add_header("X-Attachment-Id", "0")
-                # 把附件的内容读进来:
-                mime.set_payload(f.read())
-                # 用Base64编码:
-                encoders.encode_base64(mime)
-                # 添加到MIMEMultipart:
-                msg.attach(mime)
-
-            header = Getname_n[0]
-            msg["Subject"] = Header(header, "utf-8").encode()
-            msg.attach(MIMEText("send with file...", "plain", "utf-8"))
-
-            from_addr = "rusyan@sina.com"
-            msg["From"] = Header(from_addr)
-            password = "4703aaacb98c70b4"
-            to_addr = "rusonyan@qq.com"
-            smtp_server = "smtp.sina.com"
-            server = smtplib.SMTP(smtp_server, 25)
-            server.login(from_addr, password)
-            server.sendmail(from_addr, [to_addr], msg.as_string())
-
-            server.quit()
-
-            return "发送完成" + str(days)
-        else:
-            return "今日份已完成"
-
-    else:
-        return "今天不是大学习更新的日子欧!"
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+    server.quit()
+    return "ok"
