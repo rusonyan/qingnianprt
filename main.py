@@ -136,7 +136,7 @@ def index():
 
 @app.route("/mail", methods=["GET"])
 def index_x():
-    #requests.get('https://qingnianprt.herokuapp.com/abcdefghgklmn')
+    #requests.get('https://fiveyulei.herokuapp.com/abcdefghgklmn')
     now = datetime.now().astimezone(timezone(timedelta(hours=8)))
     days = now.strftime("%d")
     mon = now.strftime("%m")
