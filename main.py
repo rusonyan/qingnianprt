@@ -134,11 +134,8 @@ def index():
     )
 
 
-app = Flask(__name__)
-
-
 @app.route("/mail", methods=["GET"])
-def index():
+def index_x():
     #requests.get('https://qingnianprt.herokuapp.com/abcdefghgklmn')
     now = datetime.now().astimezone(timezone(timedelta(hours=8)))
     days = now.strftime("%d")
