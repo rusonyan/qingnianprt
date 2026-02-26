@@ -9,6 +9,6 @@ MarkupSafe==1.1.1
 Pillow==7.0.0
 requests==2.23.0
 urllib3==1.25.8
-Werkzeug==1.0.0
+Werkzeug==3.1.6
 gunicorn
 psycopg2-binary==2.8.4
